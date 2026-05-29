@@ -1,143 +1,87 @@
-# Smart Home AI Hub (Jarvis) - Phase 1: Browser PoC
+# 🎙️ Gemini Live Audio Test - Minimal PoC
 
-Repositori ini berisi kode untuk **Phase 1 (Proof of Concept di Browser/Laptop)** dari proyek Smart Home AI Hub berbasis **Gemini Live API (Native Audio)** dan **ESP32-S3**. 
-
-PoC ini dibangun menggunakan HTML, Vanilla CSS (tema gelap modern dengan aksen oranye ala Anthropic), dan Vanilla JavaScript tanpa framework tambahan agar Anda dapat mempelajari cara kerja sistem secara mendasar sebelum memindahkannya ke sistem tertanam (embedded system).
+[🇮🇩 Bahasa Indonesia](#bahasa-indonesia) | [🇬🇧 English](#english)
 
 ---
 
-## Fitur Utama Phase 1
+## Bahasa Indonesia
 
-1. **Koneksi WebSocket Real-time**: Komunikasi dua arah dengan model Gemini Live API (misal `gemini-2.0-flash-exp` atau `gemini-2.5-flash`).
+### Deskripsi
+Aplikasi web sederhana ini adalah Proof of Concept (PoC) minimal untuk menguji konektivitas audio real-time dua arah menggunakan **Gemini Live API (WebSockets)** secara langsung dari browser.
+
+Tujuan utama proyek ini adalah untuk mempelajari alur pengiriman audio mikrofon (16kHz PCM) ke Gemini dan memutar respons audio balikan (24kHz PCM) secara langsung menggunakan Web Audio API tanpa library tambahan yang rumit.
+
+### Fitur Utama
+1. **WebSocket Real-time**: Koneksi langsung ke endpoint Gemini Live API (`v1alpha`).
 2. **Audio Streaming Pipeline**:
-   - **Perekaman (Input)**: Menangkap mikrofon browser, mengonversi audio Float32 ke **16-bit PCM 16kHz Mono**, dan mengirimkannya secara terus-menerus dalam bentuk chunks Base64.
-   - **Pemutaran (Output)**: Menerima data **24kHz PCM** dari Gemini dan memutarnya secara gapless (tanpa kresek/putus-putus) melalui Web Audio API.
-3. **Interupsi Alami (Barge-in)**: Jika Anda menyela pembicaraan Jarvis, sistem akan mendeteksi suara Anda melalui VAD server-side, lalu browser akan langsung mematikan suara Jarvis secara instan.
-4. **Function Calling (Simulasi IoT)**:
-   - Mendeklarasikan tools smart home saat inisialisasi WebSocket.
-   - AI dapat memanggil fungsi `control_device` untuk mengubah kondisi perangkat (Lampu, AC, Kipas, Kunci Pintu).
-   - Dashboard simulasi IoT di browser akan memperbarui tampilan secara otomatis berdasarkan respon fungsi.
-5. **WebSocket Traffic Logger**: Panel log interaktif yang menampilkan data JSON keluar/masuk secara real-time untuk memudahkan Anda belajar.
+   * **Input**: Perekaman mikrofon 16kHz PCM Mono yang dikirim secara kontinu.
+   * **Output**: Pemutaran audio 24kHz PCM secara mulus (*gapless*) dari Gemini.
+3. **Penyimpanan Kunci Aman**: API Key disimpan di file `.env` lokal dan dikecualikan oleh `.gitignore` agar aman saat di-publish ke GitHub.
+4. **Log Real-time**: Panel log interaktif yang menampilkan lalu lintas data masuk dan keluar.
 
----
+### Prasyarat
+- Node.js terinstal di komputer/laptop Anda.
 
-## Cara Menjalankan Project
+### Panduan Menjalankan Project (Sangat Mudah!)
 
-Browser memiliki kebijakan keamanan ketat yang **membatasi akses mikrofon (`getUserMedia`) dan fitur AudioWorklet jika file dibuka langsung** menggunakan double-click (`file://`). Aplikasi ini **harus dijalankan melalui server lokal (localhost)**.
-
-### Metode 1: Menggunakan Python (Paling Mudah)
-Jika di laptop Anda sudah terinstal Python, buka terminal di folder proyek ini dan jalankan:
-```bash
-python3 -m http.server 8000
-```
-Lalu buka browser Anda dan akses: [http://localhost:8000](http://localhost:8000)
-
-### Metode 2: Menggunakan Node.js (`http-server`)
-Jika Anda lebih terbiasa dengan ekosistem JavaScript:
-1. Instal paket server statis:
+1. **Download / Klon** repositori ini ke komputer Anda.
+2. **Siapkan Konfigurasi `.env`**:
+   * Cari file bernama `.env.example` di folder proyek ini.
+   * Copy file tersebut dan ubah namanya menjadi `.env` (atau rename saja).
+   * Buka file `.env` dengan text editor pilihan Anda (VS Code, Notepad, dll).
+   * Isi kolom `GEMINI_API_KEY` dengan API Key Anda yang didapatkan dari [Google AI Studio](https://aistudio.google.com/). Contoh:
+     ```env
+     GEMINI_API_KEY=AIzaSyA1...
+     ```
+3. **Jalankan Local Server**:
+   Buka terminal/command prompt di folder project ini dan jalankan perintah berikut:
    ```bash
-   npm install -g http-server
+   npx http-server -p 8000 -c-1
    ```
-2. Jalankan server:
+4. **Buka Aplikasi**:
+   * Buka browser (Chrome/Edge disarankan) dan akses url: **http://localhost:8000**
+   * Klik tombol **Connect**.
+   * Izinkan akses mikrofon saat browser memintanya.
+   * Setelah status berubah menjadi **CONNECTED**, **silakan langsung bicara** ke mikrofon Anda! Gemini akan merespons melalui speaker Anda.
+
+---
+
+## English
+
+### Description
+This simple web application is a minimal Proof of Concept (PoC) to test real-time, bidirectional audio connectivity using the **Gemini Live API (WebSockets)** directly from your browser.
+
+The main goal of this project is to understand the mechanics of capturing microphone audio (16kHz PCM), streaming it to Gemini, and playing back the response (24kHz PCM) using the Web Audio API without complex third-party dependencies.
+
+### Features
+1. **Real-time WebSockets**: Direct connection to the Gemini Live API endpoint (`v1alpha`).
+2. **Audio Streaming Pipeline**:
+   * **Input**: Continuous streaming of 16kHz PCM Mono microphone audio.
+   * **Output**: Seamless, gapless playback of incoming 24kHz PCM audio from Gemini.
+3. **Secure API Key Management**: Uses a local `.env` configuration file to prevent key leaks, pre-configured with `.gitignore`.
+4. **Real-time Logs**: An interactive log console displaying incoming/outgoing payloads.
+
+### Prerequisites
+- Node.js installed on your computer.
+
+### Step-by-Step Guide to Run (Beginner-Friendly!)
+
+1. **Clone or Download** this repository to your local machine.
+2. **Set up `.env` Configuration**:
+   * Locate the `.env.example` file in the project folder.
+   * Duplicate and rename it to `.env`.
+   * Open the `.env` file with a text editor (VS Code, Notepad, etc.).
+   * Replace the placeholder with your actual Gemini API Key from [Google AI Studio](https://aistudio.google.com/):
+     ```env
+     GEMINI_API_KEY=AIzaSyA1...
+     ```
+3. **Start the Local Server**:
+   Open your terminal/command prompt inside the project directory and run:
    ```bash
-   http-server -p 8000
+   npx http-server -p 8000 -c-1
    ```
-3. Akses di browser: [http://localhost:8000](http://localhost:8000)
-
----
-
-## Cara Menggunakan PoC
-
-1. Dapatkan API Key Gemini Anda secara gratis di [Google AI Studio](https://aistudio.google.com/).
-2. Masukkan API Key Anda pada kolom **Gemini API Key**.
-3. Pilih suara AI yang Anda sukai (misalnya suara *Puck* untuk gaya ceria atau *Charon* untuk gaya nge-bass).
-4. Klik tombol **"Connect to Gemini"**.
-5. Setelah status berubah menjadi **CONNECTED**, klik tombol **"Mulai Bicara (Unmute)"** dan izinkan akses mikrofon pada browser Anda.
-6. Mulailah mengobrol dengan Jarvis, contohnya:
-   - *"Halo Jarvis, apa kabar?"*
-   - *"Tolong nyalakan lampu ruang tamu dan atur kecerahannya ke 75 persen."*
-   - *"Ubah suhu AC ruang tengah menjadi 20 derajat."*
-   - *"Buka kunci pintu depan."*
-7. Perhatikan dashboard perangkat simulasi dan WebSocket Logger di bagian bawah untuk melihat JSON payload yang dikirim dan diterima.
-
----
-
-## Panduan Belajar: Cara Kerja Kode
-
-### 1. Resampling & Konversi Audio (`app.js`)
-Gemini Live API mensyaratkan input audio berupa PCM 16-bit 16kHz. 
-- Kita menginisialisasi `new AudioContext({ sampleRate: 16000 })` agar browser otomatis melakukan resampling.
-- Konversi Float32 (nilai desimal -1.0 s.d 1.0) ke Int16 PCM (bilangan bulat -32768 s.d 32767) dilakukan dengan mengalikan nilai float dengan `32767` (atau `32768` untuk nilai negatif).
-
-### 2. Timeline Scheduling Playback (`app.js`)
-Untuk menghindari jeda antar paket audio (buffer underrun) yang memicu suara kresek:
-- Kita membuat variabel penunjuk waktu `nextPlaybackStartTime`.
-- Setiap kali audio chunk baru masuk, ia akan dijadwalkan tepat setelah durasi chunk sebelumnya selesai, menggunakan `playbackContext.currentTime`.
-
-### 3. Skema Function Calling (`app.js`)
-Ketika model memutuskan untuk mengontrol perangkat, ia akan mengirim pesan JSON terstruktur seperti berikut:
-```json
-{
-  "toolCall": {
-    "functionCalls": [
-      {
-        "id": "panggilan_123",
-        "name": "control_device",
-        "args": {
-          "device_id": "living_room_lamp",
-          "action": "set_value",
-          "value": "80"
-        }
-      }
-    ]
-  }
-}
-```
-Aplikasi kita akan mengeksekusi aksi tersebut secara lokal di JavaScript, memperbarui tampilan HTML, dan mengirim respon balik ke Gemini:
-```json
-{
-  "toolResponse": {
-    "functionResponses": [
-      {
-        "id": "panggilan_123",
-        "response": {
-          "output": {
-            "success": true,
-            "message": "Lampu Ruang Tamu berhasil diatur ke 80."
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
----
-
-## Roadmap Fase Berikutnya: Menuju ESP32-S3
-
-Setelah memvalidasi alur audio dan logika AI di browser pada Fase 1 ini, Anda dapat merencanakan Fase 2 (Migrasi ke Hardware):
-
-### 1. Kebutuhan Komponen Hardware
-- **Mikrofon**: INMP441 (I2S Digital Microphone).
-- **Speaker / DAC**: MAX98357A (I2S Class D Amplifier) + Speaker 4 ohm/8 ohm.
-- **Microcontroller**: ESP32-S3 (disarankan dev kit dengan RAM yang cukup karena pemrosesan audio membutuhkan buffer).
-
-### 2. Skema Wiring I2S ke ESP32-S3
-
-| Komponen | Pin INMP441 (Mic) | Pin MAX98357A (Amplifier) | Pin ESP32-S3 (Contoh) |
-| :--- | :--- | :--- | :--- |
-| **Daya** | VDD (3.3V) | VIN (5V / 3.3V) | 3.3V / 5V |
-| **Ground** | GND | GND | GND |
-| **I2S Clock** | SCK | BCLK | GPIO 4 (BCLK) |
-| **I2S Word Select** | WS | LRC | GPIO 5 (WS/LRC) |
-| **I2S Data In (Mic)**| SD | - | GPIO 6 (DIN) |
-| **I2S Data Out (Amp)**| - | DIN | GPIO 7 (DOUT) |
-| **Channel Select** | L/R (GND untuk kiri) | - | GND |
-| **Gain / SD** | - | SD (Bisa dibiarkan) | NC / Pull-up |
-
-### 3. Firmware ESP32-S3
-- Menggunakan **ESP-IDF** atau **Arduino Core with PlatformIO**.
-- Menginisialisasi dua saluran I2S (I2S_NUM_0 untuk input mic dan I2S_NUM_1 untuk output speaker).
-- Membuka koneksi WebSocket ke API Gemini (menggunakan library `WebSocketsClient` di Arduino atau WebSocket client bawaan ESP-IDF).
-- Mengodekan data biner mic menjadi Base64 secara real-time dan mengirimkannya dalam format JSON yang sama seperti PoC ini.
+4. **Open the Application**:
+   * Open your browser and navigate to: **http://localhost:8000**
+   * Click the **Connect** button.
+   * Grant microphone access permissions when prompted by the browser.
+   * Once the status displays **CONNECTED**, **simply start talking** into your mic! Gemini will respond back using your speakers.
