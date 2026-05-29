@@ -1,15 +1,25 @@
+// app.js — Gemini Live Audio PoC
+// Referensi: github.com/google-gemini/gemini-live-api-examples
+//
+// Alur kerja:
+//   1. Muat API Key dari file .env
+//   2. Buka WebSocket ke Gemini Live API (v1alpha)
+//   3. Kirim setup message
+//   4. Mic selalu aktif → audio 16kHz PCM dikirim terus ke server
+//   5. Server VAD mendeteksi kapan user bicara & berhenti
+//   6. Respons audio 24kHz PCM dimainkan via Web Audio API
+
 const btnConnect = document.getElementById('btnConnect');
-const btnTalk = document.getElementById('btnTalk');
 const statusEl = document.getElementById('status');
 const logEl = document.getElementById('log');
 
 let ws = null;
-let audioCtx = null;
-let playCtx = null;
+let audioCtx = null;       // AudioContext mic (16kHz)
+let playCtx = null;        // AudioContext playback (24kHz)
 let micStream = null;
 let processor = null;
-let isTalking = false;
 let nextPlayTime = 0;
+let activeSources = [];    // Track audio sources untuk barge-in
 
 function log(msg, cls = '') {
   const line = document.createElement('div');
@@ -20,6 +30,9 @@ function log(msg, cls = '') {
   console.log(msg);
 }
 
+// ============================================================
+// ENV — Muat konfigurasi dari .env
+// ============================================================
 const CONFIG = {
   GEMINI_API_KEY: '',
   GEMINI_MODEL: 'models/gemini-3.1-flash-live-preview'
@@ -31,7 +44,6 @@ async function loadEnv() {
     if (!res.ok) throw new Error('File .env tidak ditemukan');
     const text = await res.text();
     text.split('\n').forEach(line => {
-      // Abaikan komentar dan baris kosong
       if (!line.trim() || line.trim().startsWith('#')) return;
       const parts = line.split('=');
       if (parts.length >= 2) {
@@ -47,12 +59,11 @@ async function loadEnv() {
   }
 }
 
-// Mulai muat env di awal
 btnConnect.disabled = true;
 loadEnv();
 
 // ============================================================
-// CONNECT
+// CONNECT — WebSocket ke Gemini Live API
 // ============================================================
 btnConnect.addEventListener('click', () => {
   if (ws && ws.readyState === WebSocket.OPEN) { ws.close(); return; }
@@ -68,10 +79,9 @@ function connect() {
     return;
   }
 
-  // Contoh resmi Google pakai v1alpha untuk model baru
   const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${key}`;
 
-  log('Menghubungkan... (v1alpha)', 'log-info');
+  log('Menghubungkan...', 'log-info');
   statusEl.textContent = 'CONNECTING...';
   btnConnect.disabled = true;
 
@@ -82,10 +92,8 @@ function connect() {
     statusEl.textContent = 'CONNECTED';
     btnConnect.textContent = 'Disconnect';
     btnConnect.disabled = false;
-    btnTalk.disabled = false;
 
-    // Format setup PERSIS seperti contoh resmi Google
-    // github.com/google-gemini/gemini-live-api-examples/.../geminilive.js line 334
+    // Setup message — format sesuai contoh resmi Google
     const setupMessage = {
       setup: {
         model: model,
@@ -107,10 +115,11 @@ function connect() {
     log('→ Setup sent', 'log-sent');
     ws.send(JSON.stringify(setupMessage));
 
+    // Mic langsung aktif setelah connect
     startMic();
   };
 
-  // Handle pesan masuk — bisa String atau Blob (sesuai contoh resmi Google)
+  // Handle response — bisa String, Blob, atau ArrayBuffer
   ws.onmessage = async (event) => {
     let jsonText;
     if (event.data instanceof Blob) {
@@ -124,52 +133,40 @@ function connect() {
     try {
       const data = JSON.parse(jsonText);
 
-      // Setup complete
       if (data.setupComplete) {
         log('✅ Setup complete!', 'log-info');
         return;
       }
 
-      // Server content
       const sc = data.serverContent;
       if (sc) {
         // Audio dari model
         if (sc.modelTurn?.parts) {
           for (const part of sc.modelTurn.parts) {
-            if (part.inlineData?.data) {
-              playAudio(part.inlineData.data);
-            }
-            if (part.text) {
-              log('💬 ' + part.text, 'log-recv');
-            }
+            if (part.inlineData?.data) playAudio(part.inlineData.data);
+            if (part.text) log('💬 ' + part.text, 'log-recv');
           }
         }
 
         // Transkripsi
-        if (sc.inputTranscription?.text) {
-          log('🗣️ Kamu: ' + sc.inputTranscription.text, 'log-info');
-        }
-        if (sc.outputTranscription?.text) {
-          log('🤖 Gemini: ' + sc.outputTranscription.text, 'log-info');
-        }
+        if (sc.inputTranscription?.text) log('🗣️ Kamu: ' + sc.inputTranscription.text, 'log-info');
+        if (sc.outputTranscription?.text) log('🤖 Gemini: ' + sc.outputTranscription.text, 'log-info');
 
+        // Barge-in: user menyela saat Gemini bicara
         if (sc.interrupted) {
           log('⚡ Interupsi', 'log-info');
           flushPlayback();
         }
-        if (sc.turnComplete) {
-          log('✅ Turn selesai', 'log-info');
-        }
+        if (sc.turnComplete) log('✅ Turn selesai', 'log-info');
         return;
       }
 
-      // Tool call
       if (data.toolCall) {
         log('🔧 ' + JSON.stringify(data.toolCall), 'log-recv');
         return;
       }
 
-      // Unknown
+      // Pesan lain (misal sessionResumptionUpdate)
       log('← ' + JSON.stringify(data).substring(0, 300), 'log-recv');
 
     } catch (err) {
@@ -184,15 +181,17 @@ function connect() {
     statusEl.textContent = 'DISCONNECTED';
     btnConnect.textContent = 'Connect';
     btnConnect.disabled = false;
-    btnTalk.disabled = true;
     stopMic();
     ws = null;
   };
 }
 
 // ============================================================
-// MIC — 16kHz PCM
+// MIC — Rekam audio 16kHz PCM via AudioWorklet
 // ============================================================
+// AudioWorklet dipilih karena ScriptProcessorNode sudah deprecated
+// dan berjalan di main thread (menyebabkan UI lag).
+// AudioWorklet berjalan di dedicated audio thread.
 async function startMic() {
   try {
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -203,6 +202,7 @@ async function startMic() {
     audioCtx = new AudioContext({ sampleRate: 16000 });
     const source = audioCtx.createMediaStreamSource(micStream);
 
+    // Inline AudioWorklet processor
     const code = `
       class P extends AudioWorkletProcessor {
         process(inputs) {
@@ -221,8 +221,8 @@ async function startMic() {
     processor = new AudioWorkletNode(audioCtx, 'p');
     let buf = [];
     processor.port.onmessage = (e) => {
-      // SELALU kirim audio ke server (termasuk saat diam)
-      // VAD server yang akan mendeteksi kapan kamu bicara & kapan berhenti
+      // Audio SELALU dikirim (termasuk saat diam).
+      // VAD server Gemini yang mendeteksi kapan user bicara & berhenti.
       buf.push(...e.data);
       if (buf.length >= 2048) {
         sendAudio(buf.splice(0, 2048));
@@ -240,21 +240,21 @@ function stopMic() {
   audioCtx?.close(); audioCtx = null;
 }
 
-// Contoh resmi Google: mimeType "audio/pcm" (tanpa rate)
-// github.com/google-gemini/gemini-live-api-examples/.../geminilive.js line 434
+// ============================================================
+// SEND AUDIO — Float32 → Int16 PCM → Base64 → WebSocket
+// ============================================================
 function sendAudio(samples) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
+  // Konversi Float32 (-1.0 s/d 1.0) ke Int16 (-32768 s/d 32767)
   const int16 = new Int16Array(samples.length);
   for (let i = 0; i < samples.length; i++) {
     const s = Math.max(-1, Math.min(1, samples[i]));
     int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
 
-  let bin = '';
-  const bytes = new Uint8Array(int16.buffer);
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  const b64 = btoa(bin);
+  // Int16 → Base64
+  const b64 = btoa(Array.from(new Uint8Array(int16.buffer), b => String.fromCharCode(b)).join(''));
 
   ws.send(JSON.stringify({
     realtimeInput: {
@@ -262,6 +262,7 @@ function sendAudio(samples) {
     }
   }));
 
+  // Log setiap 10 chunk (supaya tidak spam)
   sendAudio._c = (sendAudio._c || 0) + 1;
   if (sendAudio._c % 10 === 1) {
     log('→ Audio #' + sendAudio._c, 'log-sent');
@@ -269,12 +270,16 @@ function sendAudio(samples) {
 }
 
 // ============================================================
-// PLAYBACK — 24kHz PCM
+// PLAYBACK — Putar audio PCM 24kHz dari Gemini
 // ============================================================
+// Teknik: scheduled playback dengan nextPlayTime.
+// Setiap chunk dijadwalkan mulai tepat setelah chunk sebelumnya selesai,
+// sehingga tidak ada gap atau overlap antar chunk (gapless playback).
 function playAudio(base64) {
   if (!playCtx) playCtx = new AudioContext({ sampleRate: 24000 });
   if (playCtx.state === 'suspended') playCtx.resume();
 
+  // Base64 → Int16 → Float32
   const bin = atob(base64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -288,31 +293,18 @@ function playAudio(base64) {
   src.buffer = buf;
   src.connect(playCtx.destination);
 
+  // Track source supaya bisa di-stop saat barge-in
+  activeSources.push(src);
+  src.onended = () => activeSources = activeSources.filter(s => s !== src);
+
   if (nextPlayTime < playCtx.currentTime) nextPlayTime = playCtx.currentTime + 0.02;
   src.start(nextPlayTime);
   nextPlayTime += buf.duration;
 }
 
-function flushPlayback() { nextPlayTime = 0; }
-
-// ============================================================
-// TALK
-// ============================================================
-btnTalk.addEventListener('mousedown', () => {
-  isTalking = true;
-  btnTalk.classList.add('active');
-  btnTalk.textContent = '🔴 Bicara...';
-  log('🎤 Mulai bicara', 'log-info');
-  if (audioCtx?.state === 'suspended') audioCtx.resume();
-  if (playCtx?.state === 'suspended') playCtx.resume();
-});
-btnTalk.addEventListener('mouseup', stopTalking);
-btnTalk.addEventListener('mouseleave', stopTalking);
-
-function stopTalking() {
-  if (!isTalking) return;
-  isTalking = false;
-  btnTalk.classList.remove('active');
-  btnTalk.textContent = '🎤 Hold to Talk';
-  log('🎤 Berhenti bicara', 'log-info');
+// Stop semua audio yang sedang/akan diputar (untuk barge-in)
+function flushPlayback() {
+  activeSources.forEach(s => { try { s.stop(); } catch(e) {} });
+  activeSources = [];
+  nextPlayTime = 0;
 }
