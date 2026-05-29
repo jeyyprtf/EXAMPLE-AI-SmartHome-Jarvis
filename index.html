@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Live Audio Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      color: #eee;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    h1 { font-size: 1.2rem; color: #e8622a; margin-bottom: 1.5rem; }
+    .controls { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; justify-content: center; }
+    button {
+      padding: 0.6rem 1.4rem;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: #ccc;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover:not(:disabled) { border-color: #e8622a; color: #fff; }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    button.active { background: #e8622a; color: #fff; border-color: #e8622a; }
+    #status {
+      font-size: 0.75rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 4px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      margin-bottom: 1rem;
+      font-family: monospace;
+    }
+    #log {
+      width: 100%;
+      max-width: 700px;
+      flex: 1;
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #888;
+      max-height: 70vh;
+    }
+    .log-sent { color: #e8622a; }
+    .log-recv { color: #60a5fa; }
+    .log-err  { color: #f87171; }
+    .log-info { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Gemini Live Audio Test</h1>
+  <div id="status">DISCONNECTED</div>
+  <div class="controls">
+    <button id="btnConnect">Connect</button>
+    <button id="btnTalk" disabled style="display:none">🎤</button>
+  </div>
+  <p style="font-size:0.75rem; color:#666; margin-bottom:1rem;">Setelah connected, langsung bicara saja. Mic selalu aktif.</p>
+  <div id="log">Siap. Klik Connect untuk mulai.\n</div>
+
+  <script src="app.js"></script>
+</body>
+</html>

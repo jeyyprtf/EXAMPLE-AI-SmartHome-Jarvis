@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL ANY Operator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --bg4: #222222;
+    --border: #2a2a2a;
+    --border2: #333333;
+    --text: #f0f0f0;
+    --text2: #999999;
+    --text3: #555555;
+    --orange: #e8622a;
+    --orange2: #f07340;
+    --orange-dim: rgba(232,98,42,0.12);
+    --orange-dim2: rgba(232,98,42,0.06);
+    --green: #4ade80;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,13,13,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--orange);
+  }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a {
+    font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text2);
+    text-decoration: none; transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* SECTIONS */
+  section {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 120px 0 80px;
+    max-width: 900px;
+    margin: 0 auto;
+    padding-left: 2rem; padding-right: 2rem;
+  }
+
+  /* HERO */
+  .hero { min-height: 100vh; justify-content: center; text-align: left; position: relative; padding-top: 56px; }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--orange); background: var(--orange-dim);
+    border: 1px solid rgba(232,98,42,0.25);
+    padding: 5px 12px; border-radius: 4px;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero h1 {
+    font-size: clamp(56px, 10vw, 96px);
+    font-weight: 800; line-height: 0.92;
+    letter-spacing: -0.03em;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .hero h1 span { color: var(--orange); }
+  .hero-sub {
+    font-size: 17px; color: var(--text2); max-width: 520px;
+    margin-top: 2rem; line-height: 1.7;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .hero-pills {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2.5rem;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .pill {
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    padding: 6px 14px; border-radius: 99px;
+    border: 1px solid var(--border2); color: var(--text2);
+    background: var(--bg3);
+  }
+  .pill.accent { border-color: rgba(232,98,42,0.4); color: var(--orange); background: var(--orange-dim2); }
+
+  .hero-scroll {
+    position: absolute; bottom: 2.5rem; left: 2rem;
+    font-family: var(--mono); font-size: 11px; color: var(--text3);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+  .scroll-line {
+    width: 32px; height: 1px; background: var(--text3);
+  }
+
+  /* SECTION LABELS */
+  .section-num {
+    font-family: var(--mono); font-size: 11px; color: var(--orange);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-num::after { content: ''; flex: 0 0 32px; height: 1px; background: var(--orange); opacity: 0.4; }
+
+  .section-title {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700; line-height: 1.1;
+    letter-spacing: -0.02em; margin-bottom: 2rem;
+  }
+  .section-title span { color: var(--orange); }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-accent {
+    border-left: 3px solid var(--orange);
+    border-radius: 0 12px 12px 0;
+  }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: var(--mono); font-size: 13px; line-height: 1.8;
+  }
+  .code-header {
+    background: var(--bg3); border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+  .code-lang { font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+  .code-body { padding: 1.25rem 1.5rem; overflow-x: auto; }
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; }
+  .op-color { color: var(--orange2); font-weight: 600; }
+
+  /* TABLE */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .data-table th {
+    text-align: left; padding: 10px 14px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text3); border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr.pass td { color: var(--text); }
+  .data-table tr.pass td:first-child { color: var(--green); }
+  .data-table tr.fail td:first-child { color: var(--red); }
+  .badge-pass { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+  .badge-fail { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+  /* OPERATOR CARDS */
+  .op-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.5rem; }
+  .op-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .op-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--orange); transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .op-card:hover::before, .op-card.active::before { transform: scaleX(1); }
+  .op-card:hover, .op-card.active { border-color: rgba(232,98,42,0.3); background: var(--bg3); }
+  .op-card-label { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--orange); margin-bottom: 4px; }
+  .op-card-eq { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 8px; }
+  .op-card-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .op-group-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+
+  /* CARA KERJA STEPS */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step { display: flex; gap: 1.5rem; }
+  .step-left { display: flex; flex-direction: column; align-items: center; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--orange-dim); border: 1px solid rgba(232,98,42,0.3);
+    color: var(--orange); font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-family: var(--mono);
+  }
+  .step-line { width: 1px; flex: 1; background: var(--border); margin: 4px 0; min-height: 24px; }
+  .step:last-child .step-line { display: none; }
+  .step-content { padding-bottom: 1.5rem; flex: 1; }
+  .step-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; padding-top: 4px; }
+  .step-desc { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: var(--orange-dim);
+    border: 1px solid rgba(232,98,42,0.2);
+    border-radius: 10px; padding: 1.25rem 1.5rem;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .highlight-icon { color: var(--orange); font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .highlight-text { font-size: 14px; color: var(--text2); line-height: 1.6; }
+  .highlight-text strong { color: var(--text); }
+
+  /* STUDI KASUS */
+  .case-block {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+  .case-header {
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .case-num { font-family: var(--mono); font-size: 11px; color: var(--orange); }
+  .case-title { font-size: 15px; font-weight: 600; }
+  .case-body { padding: 1.5rem; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 2.5rem 0; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    font-family: var(--mono); font-size: 12px; color: var(--text3);
+  }
+  footer span { color: var(--orange); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* INTERACTIVE RESULT */
+  #op-result { margin-top: 1.5rem; }
+  .result-table-wrap {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .result-header {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 11px; color: var(--text3);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .result-count { color: var(--orange); }
+
+  /* ANALOGY */
+  .analogy-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+  }
+  .analogy-quote {
+    font-size: 32px; color: var(--orange); opacity: 0.3;
+    font-family: Georgia, serif; line-height: 1;
+    position: absolute; top: 1rem; left: 1.25rem;
+  }
+  .analogy-text {
+    font-size: 16px; color: var(--text); line-height: 1.7;
+    padding-top: 1.5rem; font-style: italic;
+  }
+  .analogy-sub { font-size: 13px; color: var(--text2); margin-top: 0.75rem; font-style: normal; }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3, .op-cards { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">SQL — ANY</div>
+  <div class="nav-links">
+    <a href="#pengertian">Pengertian</a>
+    <a href="#cara-kerja">Cara Kerja</a>
+    <a href="#operator">Operator</a>
+    <a href="#kasus">Studi Kasus</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-tag">Pertemuan 13 — Sub-Query</div>
+  <h1>SQL<br><span>ANY</span><br>Operator</h1>
+  <p class="hero-sub">
+    Membandingkan satu nilai dengan sekumpulan nilai dari sub-query.
+    Cukup satu yang cocok, hasilnya <strong>TRUE</strong>.
+  </p>
+  <div class="hero-pills">
+    <span class="pill accent">> ANY</span>
+    <span class="pill accent">< ANY</span>
+    <span class="pill accent">= ANY</span>
+    <span class="pill">vs ALL</span>
+    <span class="pill">Sub-Query</span>
+    <span class="pill">WHERE Clause</span>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    Scroll untuk lanjut
+  </div>
+</section>
+
+<!-- PENGERTIAN -->
+<section id="pengertian">
+  <div class="section-num">01 — Pengertian</div>
+  <h2 class="section-title">Apa itu <span>ANY</span>?</h2>
+
+  <div class="fade-in" style="margin-bottom:1.5rem">
+    <div class="card card-accent">
+      <p style="font-size:16px;line-height:1.8;color:var(--text2)">
+        <strong style="color:var(--text)">ANY</strong> adalah operator SQL yang digunakan bersama operator perbandingan
+        (<code style="color:var(--orange);background:var(--orange-dim2);padding:1px 6px;border-radius:4px;font-family:var(--mono)">=, <>, <, >, <=, >=</code>)
+        untuk membandingkan <em>satu nilai</em> dengan <em>kumpulan nilai</em> yang dihasilkan sub-query.
+        Kondisi bernilai <strong style="color:var(--green)">TRUE</strong> jika minimal <strong style="color:var(--text)">satu nilai</strong> dalam kumpulan memenuhi syarat.
+      </p>
+    </div>
+  </div>
+
+  <div class="fade-in">
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        <div class="code-lang">SQL Syntax</div>
+      </div>
+      <div class="code-body">
+<pre><span class="kw">SELECT</span> column_name(s)
+<span class="kw">FROM</span> table_name
+<span class="kw">WHERE</span> nilai_angka <span class="op-color">> ANY</span> (
+    <span class="kw">SELECT</span> nilai_angka
+    <span class="kw">FROM</span> nilai
+    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>
+); <span class="cm">-- TRUE jika > setidaknya SATU nilai dalam set</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fade-in">
+    <div class="analogy-card">
+      <div class="analogy-quote">"</div>
+      <p class="analogy-text">
+        Bayangkan seleksi lomba. Panitia bilang: <em>"Kamu lolos kalau nilaimu lebih tinggi dari setidaknya satu peserta di kelas ASD."</em>
+      </p>
+      <p class="analogy-sub">
+        Kamu tidak harus mengalahkan semua orang. Kalahkan si paling lemah saja → kamu lolos.<br>
+        Itulah <code style="color:var(--orange);font-family:var(--mono)">> ANY</code> — standarnya rendah, yang penting ada satu yang bisa kamu lewati.
+      </p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fade-in">
+    <h3 style="font-size:18px;font-weight:600;margin-bottom:1rem">Fungsi <span style="color:var(--orange)">ANY</span> sebagai filter</h3>
+    <p style="color:var(--text2);font-size:15px;line-height:1.8;margin-bottom:1.5rem">
+      <code style="color:var(--orange);font-family:var(--mono)">ANY</code> ada di dalam klausa <code style="color:var(--blue);font-family:var(--mono)">WHERE</code>.
+      Setelah evaluasi, hasilnya sederhana:
+    </p>
+    <div class="grid-2" style="gap:1rem">
+      <div class="card" style="border-color:rgba(74,222,128,0.2);background:rgba(74,222,128,0.04)">
+        <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px">TRUE</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.6">Baris <strong style="color:var(--text)">masuk</strong> ke hasil query. Kondisi terpenuhi untuk setidaknya satu nilai dalam sub-query.</div>
+      </div>
+      <div class="card" style="border-color:rgba(248,113,113,0.2);background:rgba(248,113,113,0.04)">
+        <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--red);margin-bottom:8px">FALSE</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.6">Baris <strong style="color:var(--text)">dibuang</strong>. Tidak ada satupun nilai dalam sub-query yang memenuhi kondisi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CARA KERJA -->
+<section id="cara-kerja">
+  <div class="section-num">02 — Mekanisme</div>
+  <h2 class="section-title">Cara <span>Kerja</span></h2>
+
+  <div class="fade-in" style="margin-bottom:2rem">
+    <div class="highlight-box">
+      <div class="highlight-icon">◈</div>
+      <div class="highlight-text">
+        <strong>Setup:</strong> Sub-query kelas ASD menghasilkan set nilai <code style="color:var(--orange);font-family:var(--mono)">{60, 70, 80}</code>.
+        Outer query akan mengecek setiap mahasiswa satu per satu.
+      </div>
+    </div>
+  </div>
+
+  <div class="fade-in steps">
+    <div class="step">
+      <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Sub-query dieksekusi lebih dulu</div>
+        <div class="step-desc">Database menjalankan sub-query dan menyimpan hasilnya sebagai set sementara: <code style="color:var(--orange);font-family:var(--mono)">{60, 70, 80}</code>. Sub-query ini hanya dieksekusi <em>sekali</em>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Outer query baca baris pertama</div>
+        <div class="step-desc">Misal: Aldi dengan <code style="font-family:var(--mono);color:var(--text2)">nilai_angka = 55</code>. Database akan mengevaluasi kondisi WHERE untuk baris ini.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Evaluasi satu per satu terhadap set</div>
+        <div class="step-desc">
+          Database cek: <code style="font-family:var(--mono);color:var(--red)">55 > 60?</code> Tidak. <code style="font-family:var(--mono);color:var(--red)">55 > 70?</code> Tidak. <code style="font-family:var(--mono);color:var(--red)">55 > 80?</code> Tidak.<br>
+          Semua FALSE → hasil ANY = FALSE → <strong style="color:var(--red)">baris Aldi dibuang</strong>.
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Lanjut ke baris berikutnya</div>
+        <div class="step-desc">
+          Budi dengan <code style="font-family:var(--mono);color:var(--text2)">nilai_angka = 65</code>: <code style="font-family:var(--mono);color:var(--green)">65 > 60?</code> <strong style="color:var(--green)">Ya! → langsung TRUE.</strong><br>
+          ANY berhenti cek begitu ada satu yang TRUE → <strong style="color:var(--green)">baris Budi masuk</strong>.
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-left"><div class="step-num">5</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Ulangi untuk semua baris</div>
+        <div class="step-desc">Proses berlanjut sampai semua baris di outer query dievaluasi. Hasil akhir = kumpulan baris yang lolos filter WHERE.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fade-in">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:1rem;color:var(--text2)">Visualisasi evaluasi baris per baris:</h3>
+    <div class="result-table-wrap">
+      <div class="result-header">
+        <span>mahasiswa — evaluasi <code style="color:var(--orange)">nilai_angka > ANY {60, 70, 80}</code></span>
+        <span class="result-count">3 dari 5 lolos</span>
+      </div>
+      <table class="data-table">
+        <tr><th>nim</th><th>nama</th><th>nilai_angka</th><th>>60</th><th>>70</th><th>>80</th><th>hasil</th></tr>
+        <tr class="fail">
+          <td>001</td><td>Aldi</td><td>55</td>
+          <td style="color:var(--red)">✗</td><td style="color:var(--red)">✗</td><td style="color:var(--red)">✗</td>
+          <td><span class="badge-fail">gagal</span></td>
+        </tr>
+        <tr class="pass">
+          <td>002</td><td>Budi</td><td>65</td>
+          <td style="color:var(--green)">✓</td><td style="color:var(--red)">✗</td><td style="color:var(--red)">✗</td>
+          <td><span class="badge-pass">lolos</span></td>
+        </tr>
+        <tr class="pass">
+          <td>003</td><td>Citra</td><td>75</td>
+          <td style="color:var(--green)">✓</td><td style="color:var(--green)">✓</td><td style="color:var(--red)">✗</td>
+          <td><span class="badge-pass">lolos</span></td>
+        </tr>
+        <tr class="pass">
+          <td>004</td><td>Dani</td><td>80</td>
+          <td style="color:var(--green)">✓</td><td style="color:var(--green)">✓</td><td style="color:var(--red)">✗</td>
+          <td><span class="badge-pass">lolos</span></td>
+        </tr>
+        <tr class="pass">
+          <td>005</td><td>Eva</td><td>90</td>
+          <td style="color:var(--green)">✓</td><td style="color:var(--green)">✓</td><td style="color:var(--green)">✓</td>
+          <td><span class="badge-pass">lolos</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- OPERATOR -->
+<section id="operator">
+  <div class="section-num">03 — Referensi</div>
+  <h2 class="section-title">Semua <span>Operator</span> ANY</h2>
+
+  <div class="fade-in">
+    <div class="op-group-label">Grup ANY — cukup satu yang cocok</div>
+    <div class="op-cards" style="grid-template-columns:repeat(3,1fr)">
+      <div class="op-card active" onclick="showResult(this,'any_gt')">
+        <div class="op-card-label">> ANY</div>
+        <div class="op-card-eq">≡ > MIN(...)</div>
+        <div class="op-card-desc">Lebih besar dari nilai terkecil dalam set</div>
+      </div>
+      <div class="op-card" onclick="showResult(this,'any_lt')">
+        <div class="op-card-label">< ANY</div>
+        <div class="op-card-eq">≡ < MAX(...)</div>
+        <div class="op-card-desc">Lebih kecil dari nilai terbesar dalam set</div>
+      </div>
+      <div class="op-card" onclick="showResult(this,'any_eq')">
+        <div class="op-card-label">= ANY</div>
+        <div class="op-card-eq">≡ IN (...)</div>
+        <div class="op-card-desc">Sama persis dengan salah satu nilai dalam set</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="op-result" class="fade-in">
+    <div id="op-code-block"></div>
+    <div style="margin-top:1rem" id="op-explain-block"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fade-in">
+    <div class="op-group-label" style="margin-top:0">Perbandingan: ANY vs ALL</div>
+    <div class="card" style="overflow:hidden;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:var(--bg3)">
+            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border)">Operator</th>
+            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border)">Ekuivalen</th>
+            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border)">Standar</th>
+            <th style="padding:12px 16px;text-align:left;font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--border)">Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">> ANY</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">> MIN</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--green)">Rendah</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2)">Cukup kalahkan yang terendah</td></tr>
+          <tr style="background:var(--bg3)"><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">> ALL</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">> MAX</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--red)">Tinggi</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2)">Harus kalahkan yang tertinggi</td></tr>
+          <tr><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">= ANY</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">IN</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--blue)">Eksak</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2)">Sama dengan salah satu nilai</td></tr>
+          <tr style="background:var(--bg3)"><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)"><> ALL</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">NOT IN</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--blue)">Eksak</td><td style="padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text2)">Tidak sama dengan semua (aman NULL)</td></tr>
+          <tr><td style="padding:10px 16px;font-family:var(--mono);color:var(--orange)">< ANY</td><td style="padding:10px 16px;font-family:var(--mono);color:var(--text2)">< MAX</td><td style="padding:10px 16px;color:var(--green)">Rendah</td><td style="padding:10px 16px;color:var(--text2)">Cukup di bawah yang tertinggi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- STUDI KASUS -->
+<section id="kasus">
+  <div class="section-num">04 — Praktik</div>
+  <h2 class="section-title">Studi <span>Kasus</span></h2>
+
+  <div style="margin-bottom:1.5rem;font-size:14px;color:var(--text2);font-family:var(--mono);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 16px">
+    Database: <span style="color:var(--orange)">mahasiswa</span>(nim, nama) | <span style="color:var(--orange)">nilai</span>(nim, kode_matakuliah, nilai_huruf, nilai_angka)
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+
+    <!-- KASUS 1 -->
+    <div class="case-block fade-in">
+      <div class="case-header">
+        <div class="case-num">Kasus 01</div>
+        <div class="case-title">Mahasiswa dengan nilai di atas minimal kelas ASD</div>
+      </div>
+      <div class="case-body">
+        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6">
+          Tampilkan mahasiswa yang nilai angkanya <strong style="color:var(--text)">lebih besar dari setidaknya satu</strong> nilai di kelas ASD.
+          Artinya: nilai kamu harus mengalahkan si paling lemah di ASD.
+        </p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+            <div class="code-lang">SQL</div>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">SELECT</span> nim, nama, nilai_angka
+<span class="kw">FROM</span> nilai
+<span class="kw">WHERE</span> nilai_angka <span class="op-color">> ANY</span> (
+    <span class="kw">SELECT</span> nilai_angka
+    <span class="kw">FROM</span> nilai
+    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>
+);
+<span class="cm">-- Ekuivalen: WHERE nilai_angka > MIN(nilai ASD)</span>
+<span class="cm">-- Jika ASD = {60,70,80} → lolos jika nilai > 60</span></pre>
+          </div>
+        </div>
+        <div class="highlight-box" style="margin-top:1rem">
+          <div class="highlight-icon">→</div>
+          <div class="highlight-text"><strong>Hasil:</strong> Budi (65), Citra (75), Dani (80), Eva (90) — semua yang di atas 60.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KASUS 2 -->
+    <div class="case-block fade-in">
+      <div class="case-header">
+        <div class="case-num">Kasus 02</div>
+        <div class="case-title">Mahasiswa yang nilainya ada di daftar nilai kelas ASD</div>
+      </div>
+      <div class="case-body">
+        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6">
+          Tampilkan mahasiswa yang nilai angkanya <strong style="color:var(--text)">sama persis</strong> dengan salah satu nilai di kelas ASD.
+          Operator <code style="color:var(--orange);font-family:var(--mono)">= ANY</code> identik dengan <code style="color:var(--blue);font-family:var(--mono)">IN</code>.
+        </p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+            <div class="code-lang">SQL</div>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">SELECT</span> nim, nama, nilai_angka
+<span class="kw">FROM</span> nilai
+<span class="kw">WHERE</span> nilai_angka <span class="op-color">= ANY</span> (
+    <span class="kw">SELECT</span> nilai_angka
+    <span class="kw">FROM</span> nilai
+    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>
+);
+<span class="cm">-- Sama persis dengan:</span>
+<span class="cm">-- WHERE nilai_angka IN (SELECT nilai_angka FROM nilai WHERE kode_matakuliah = 'ASD')</span></pre>
+          </div>
+        </div>
+        <div class="highlight-box" style="margin-top:1rem">
+          <div class="highlight-icon">→</div>
+          <div class="highlight-text"><strong>Hasil:</strong> Hanya Dani (80) — satu-satunya yang nilainya ada dalam set {60, 70, 80}.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KASUS 3 -->
+    <div class="case-block fade-in">
+      <div class="case-header">
+        <div class="case-num">Kasus 03</div>
+        <div class="case-title">Mahasiswa yang nilainya di bawah nilai tertinggi kelas ASD</div>
+      </div>
+      <div class="case-body">
+        <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6">
+          Tampilkan mahasiswa yang nilainya <strong style="color:var(--text)">lebih kecil dari setidaknya satu</strong> nilai di ASD.
+          Artinya: nilaimu harus di bawah si paling tinggi di ASD.
+        </p>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+            <div class="code-lang">SQL</div>
+          </div>
+          <div class="code-body">
+<pre><span class="kw">SELECT</span> nim, nama, nilai_angka
+<span class="kw">FROM</span> nilai
+<span class="kw">WHERE</span> nilai_angka <span class="op-color">< ANY</span> (
+    <span class="kw">SELECT</span> nilai_angka
+    <span class="kw">FROM</span> nilai
+    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>
+);
+<span class="cm">-- Ekuivalen: WHERE nilai_angka < MAX(nilai ASD)</span>
+<span class="cm">-- Jika ASD = {60,70,80} → lolos jika nilai < 80</span></pre>
+          </div>
+        </div>
+        <div class="highlight-box" style="margin-top:1rem">
+          <div class="highlight-icon">→</div>
+          <div class="highlight-text"><strong>Hasil:</strong> Aldi (55), Budi (65), Citra (75) — semua yang di bawah 80. Dani dan Eva tidak masuk karena nilainya ≥ 80.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="fade-in">
+    <div class="highlight-box">
+      <div class="highlight-icon">◎</div>
+      <div class="highlight-text">
+        <strong>Ingat kuncinya:</strong> ANY itu <em>filter</em>. TRUE → baris masuk ke hasil. FALSE → baris dibuang.
+        ANY berhenti evaluasi begitu menemukan <em>satu nilai yang cocok</em> — efisien dan cepat.
+        <br><br>
+        <strong>ANY = longgar</strong> (cukup satu). <strong>ALL = ketat</strong> (harus semua). Itu saja bedanya.
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Basis Data 2026 — Pertemuan 13 · Sub-Query · <span>ANY</span> Operator
+</footer>
+
+<script>
+const opData = {
+  any_gt: {
+    sql: `<span class="kw">SELECT</span> nim, nama, nilai_angka\n<span class="kw">FROM</span> nilai\n<span class="kw">WHERE</span> nilai_angka <span class="op-color">> ANY</span> (\n    <span class="kw">SELECT</span> nilai_angka <span class="kw">FROM</span> nilai\n    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>\n);\n<span class="cm">-- Set ASD = {60,70,80} → ekuivalen: nilai_angka > MIN(60)</span>`,
+    explain: 'Lolos jika nilai lebih besar dari setidaknya satu nilai di ASD. Cukup kalahkan yang paling kecil (60). Hasil: Budi, Citra, Dani, Eva.',
+    result: [
+      {nim:'001',nama:'Aldi',nilai:55,pass:false},
+      {nim:'002',nama:'Budi',nilai:65,pass:true},
+      {nim:'003',nama:'Citra',nilai:75,pass:true},
+      {nim:'004',nama:'Dani',nilai:80,pass:true},
+      {nim:'005',nama:'Eva',nilai:90,pass:true},
+    ]
+  },
+  any_lt: {
+    sql: `<span class="kw">SELECT</span> nim, nama, nilai_angka\n<span class="kw">FROM</span> nilai\n<span class="kw">WHERE</span> nilai_angka <span class="op-color">< ANY</span> (\n    <span class="kw">SELECT</span> nilai_angka <span class="kw">FROM</span> nilai\n    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>\n);\n<span class="cm">-- Set ASD = {60,70,80} → ekuivalen: nilai_angka < MAX(80)</span>`,
+    explain: 'Lolos jika nilai lebih kecil dari setidaknya satu nilai di ASD. Cukup di bawah yang tertinggi (80). Hasil: Aldi, Budi, Citra.',
+    result: [
+      {nim:'001',nama:'Aldi',nilai:55,pass:true},
+      {nim:'002',nama:'Budi',nilai:65,pass:true},
+      {nim:'003',nama:'Citra',nilai:75,pass:true},
+      {nim:'004',nama:'Dani',nilai:80,pass:false},
+      {nim:'005',nama:'Eva',nilai:90,pass:false},
+    ]
+  },
+  any_eq: {
+    sql: `<span class="kw">SELECT</span> nim, nama, nilai_angka\n<span class="kw">FROM</span> nilai\n<span class="kw">WHERE</span> nilai_angka <span class="op-color">= ANY</span> (\n    <span class="kw">SELECT</span> nilai_angka <span class="kw">FROM</span> nilai\n    <span class="kw">WHERE</span> kode_matakuliah = <span class="str">'ASD'</span>\n);\n<span class="cm">-- Ekuivalen persis dengan IN (60, 70, 80)</span>`,
+    explain: 'Lolos jika nilai sama persis dengan salah satu nilai di set ASD {60, 70, 80}. Identik dengan operator IN. Hasil: hanya Dani (80).',
+    result: [
+      {nim:'001',nama:'Aldi',nilai:55,pass:false},
+      {nim:'002',nama:'Budi',nilai:65,pass:false},
+      {nim:'003',nama:'Citra',nilai:75,pass:false},
+      {nim:'004',nama:'Dani',nilai:80,pass:true},
+      {nim:'005',nama:'Eva',nilai:90,pass:false},
+    ]
+  }
+};
+
+function showResult(el, key) {
+  document.querySelectorAll('.op-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const d = opData[key];
+  const passed = d.result.filter(r => r.pass).length;
+  document.getElementById('op-code-block').innerHTML = `
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        <div class="code-lang">SQL</div>
+      </div>
+      <div class="code-body"><pre>${d.sql}</pre></div>
+    </div>`;
+  document.getElementById('op-explain-block').innerHTML = `
+    <div class="result-table-wrap">
+      <div class="result-header">
+        <span>Hasil evaluasi</span>
+        <span class="result-count">${passed} dari 5 lolos</span>
+      </div>
+      <table class="data-table">
+        <tr><th>nim</th><th>nama</th><th>nilai_angka</th><th>status</th></tr>
+        ${d.result.map(r => `<tr class="${r.pass?'pass':'fail'}">
+          <td>${r.nim}</td><td>${r.nama}</td><td>${r.nilai}</td>
+          <td><span class="${r.pass?'badge-pass':'badge-fail'}">${r.pass?'lolos':'gagal'}</span></td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    <div class="highlight-box" style="margin-top:1rem">
+      <div class="highlight-icon">→</div>
+      <div class="highlight-text">${d.explain}</div>
+    </div>`;
+}
+
+showResult(document.querySelector('.op-card'), 'any_gt');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
